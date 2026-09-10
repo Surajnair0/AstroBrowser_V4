@@ -10,6 +10,10 @@ from scipy.ndimage import median_filter, label
 from skimage.filters import threshold_otsu
 
 
+# =============================================================
+# FITS VALIDATION
+# =============================================================
+
 def validate_fits_file(fits_file):
     """
     Validate that the supplied file is a usable astronomical
@@ -117,7 +121,7 @@ def validate_fits_file(fits_file):
         print(f"FITS validation error: {e}")
 
         raise ValueError(
-            "The uploaded file could not be read as a valid FITS file. "
+            "The uploaded file could not be read as a valid FITS image. "
             "Please make sure you are uploading a valid astronomical FITS image."
         )
 
@@ -369,6 +373,58 @@ def build_scientific_interpretation(
 
 
 # =============================================================
+# MEMORY-SAFE DISPLAY IMAGE
+# =============================================================
+
+def prepare_display_image(img, max_pixels=4_000_000):
+    """
+    Prepare a memory-safe image for visualization only.
+
+    Scientific calculations continue to use the full-resolution
+    image. Large images are reduced only for PNG display.
+    """
+
+    height, width = img.shape
+    total_pixels = height * width
+
+    if total_pixels <= max_pixels:
+        return img
+
+    scale = np.sqrt(
+        max_pixels / total_pixels
+    )
+
+    new_height = max(
+        1,
+        int(height * scale)
+    )
+
+    new_width = max(
+        1,
+        int(width * scale)
+    )
+
+    row_indices = np.linspace(
+        0,
+        height - 1,
+        new_height
+    ).astype(int)
+
+    col_indices = np.linspace(
+        0,
+        width - 1,
+        new_width
+    ).astype(int)
+
+    return img[
+        np.ix_(
+            row_indices,
+            col_indices
+        )
+    ]
+
+
+# =============================================================
 # MAIN FITS ANALYSIS
 # =============================================================
 
@@ -537,7 +593,6 @@ def analyze_fits(fits_file):
     if img.ndim == 3:
 
         # Use first plane of the image cube
-
         img = img[0, :, :]
 
     elif img.ndim != 2:
@@ -598,7 +653,7 @@ def analyze_fits(fits_file):
     # ---------------------------------------------------------
 
     raw_display = np.log10(
-        img + 1e-6
+        prepare_display_image(img) + 1e-6
     )
 
     plt.figure(
@@ -680,7 +735,7 @@ def analyze_fits(fits_file):
     # ---------------------------------------------------------
 
     img_display = np.log10(
-        img_norm + 1e-6
+        prepare_display_image(img_norm) + 1e-6
     )
 
     plt.figure(
