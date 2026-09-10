@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AstroBrowser — Analysis Error</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+
+<body>
+
+    <!-- =====================================================
+         TOP NAVIGATION
+         ===================================================== -->
+
+    <header class="topbar">
+
+        <div class="brand">
+            <span class="brand-symbol">✦</span>
+            <span>ASTROBROWSER</span>
+        </div>
+
+        <div class="nav-links">
+            <span>ASTROSAT</span>
+            <span>FITS ANALYSIS</span>
+        </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         ERROR CONTENT
+         ===================================================== -->
+
+    <main class="error-page">
+
+        <div class="error-content">
+
+
+            <!-- Page Label -->
+
+            <div class="eyebrow">
+                ANALYSIS ERROR
+            </div>
+
+
+            <!-- Error Icon -->
+
+            <div class="error-icon">
+                !
+            </div>
+
+
+            <!-- Main Heading -->
+
+            <h1>
+                Analysis Failed
+            </h1>
+
+
+            <!-- Description -->
+
+            <p class="error-description">
+                AstroBrowser could not process the uploaded file.
+            </p>
+
+
+            <!-- =================================================
+                 ERROR MESSAGE PANEL
+                 ================================================= -->
+
+            <div class="astro-error-panel">
+
+                <div class="astro-error-label">
+                    ERROR MESSAGE
+                </div>
+
+                <div class="astro-error-text">
+                    {{ error }}
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 WHAT TO CHECK
+                 ================================================= -->
+
+            <div class="astro-error-help">
+
+                <div class="astro-error-help-label">
+                    WHAT TO CHECK
+                </div>
+
+                <p>
+                    Make sure the file is a valid astronomical FITS
+                    image containing image data in the Primary HDU.
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 ACTION
+                 ================================================= -->
+
+            <div class="error-actions">
+
+                <a href="{{ url_for('home') }}"
+                   class="secondary-button">
+                    ← Try Another FITS File
+                </a>
+
+            </div>
+
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
+    <footer class="site-footer">
+
+        ASTROBROWSER
+
+        <span class="footer-divider">•</span>
+
+        Python-powered astronomical analysis
+
+    </footer>
+
+
+</body>
+</html>

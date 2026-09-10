@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AstroBrowser | Astronomical Image Analysis</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div class="brand">
+            <span class="brand-symbol">✦</span>
+            <span>ASTROBROWSER</span>
+        </div>
+
+        <div class="nav-links">
+            <span>ASTROSAT</span>
+            <span>FITS ANALYSIS</span>
+        </div>
+
+    </header>
+
+
+    <main class="home-page">
+
+        <section class="hero">
+
+            <div class="eyebrow">
+                ASTRONOMICAL IMAGE ANALYSIS
+            </div>
+
+            <h1>
+                Explore.
+                <span>Process.</span>
+                Interpret.
+            </h1>
+
+            <p class="hero-description">
+                Analyze AstroSat FITS images using a Python-based
+                astronomical image-processing pipeline.
+            </p>
+
+
+            <form
+                action="/upload"
+                method="POST"
+                enctype="multipart/form-data"
+                class="upload-form"
+            >
+
+                <div class="upload-box">
+
+                    <div class="upload-icon">
+                        ✦
+                    </div>
+
+                    <h2>
+                        Upload a FITS Image
+                    </h2>
+
+                    <p>
+                        Select an AstroSat FITS image to begin analysis.
+                    </p>
+
+
+                    <label for="fitsfile" class="file-label">
+                        Choose FITS File
+                    </label>
+
+                    <input
+                        type="file"
+                        id="fitsfile"
+                        name="fitsfile"
+                        accept=".fits"
+                        required
+                    >
+
+                    <div id="file-name" class="file-name">
+                        No file selected
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Analyze FITS File
+                        <span>→</span>
+                    </button>
+
+                    <div class="file-note">
+                        Supported format: .fits
+                    </div>
+
+                </div>
+
+            </form>
+
+        </section>
+
+
+        <section class="pipeline-preview">
+
+            <div class="section-label">
+                ANALYSIS PIPELINE
+            </div>
+
+            <div class="pipeline">
+
+                <div class="pipeline-step">
+                    <span class="step-number">01</span>
+                    <strong>FITS IMAGE</strong>
+                    <small>Input data</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">02</span>
+                    <strong>PROCESS</strong>
+                    <small>Noise reduction</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">03</span>
+                    <strong>DETECT</strong>
+                    <small>Bright regions</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">04</span>
+                    <strong>CLASSIFY</strong>
+                    <small>UV analysis</small>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer class="site-footer">
+
+        <span>ASTROBROWSER</span>
+
+        <span class="footer-divider">•</span>
+
+        <span>Python-powered astronomical analysis</span>
+
+    </footer>
+
+
+    <script>
+
+        const fileInput =
+            document.getElementById("fitsfile");
+
+        const fileName =
+            document.getElementById("file-name");
+
+        fileInput.addEventListener(
+            "change",
+            function () {
+
+                if (this.files.length > 0) {
+
+                    fileName.textContent =
+                        this.files[0].name;
+
+                    fileName.classList.add(
+                        "file-selected"
+                    );
+
+                } else {
+
+                    fileName.textContent =
+                        "No file selected";
+
+                    fileName.classList.remove(
+                        "file-selected"
+                    );
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AstroBrowser | Analysis Results</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- =========================================================
+         TOP BAR
+         ========================================================= -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="brand-mark">
+                ✦
+            </div>
+
+            <div class="brand-text">
+
+                <div class="brand-name">
+                    AstroBrowser
+                </div>
+
+                <div class="brand-subtitle">
+                    ASTRONOMICAL IMAGE ANALYSIS
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="topbar-status">
+
+            <span class="status-dot"></span>
+
+            ANALYSIS COMPLETE
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================================================
+         MAIN CONTENT
+         ========================================================= -->
+
+    <main class="results-container">
+
+
+        <!-- =====================================================
+             SECTION 01 — SCIENTIFIC RESULTS
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    01
+                </div>
+
+                <div>
+
+                    <h1>
+                        Scientific Results
+                    </h1>
+
+                    <p>
+                        Quantitative measurements derived from the
+                        analyzed FITS image.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="results-grid">
+
+
+                <!-- BRIGHT REGIONS -->
+
+                <div class="result-card">
+
+                    <div class="result-label">
+                        BRIGHT REGIONS
+                    </div>
+
+                    <div class="result-value">
+                        {{ result.num_regions }}
+                    </div>
+
+                    <div class="result-description">
+                        Detected bright UV regions
+                    </div>
+
+                </div>
+
+
+                <!-- UV INTENSITY -->
+
+                <div class="result-card">
+
+                    <div class="result-label">
+                        UV INTENSITY
+                    </div>
+
+                    <div class="result-value">
+                        {{ "%.6f"|format(result.uv_intensity) }}
+                    </div>
+
+                    <div class="result-description">
+                        Total measured UV intensity
+                    </div>
+
+                </div>
+
+
+                <!-- INTENSITY VARIATION -->
+
+                <div class="result-card">
+
+                    <div class="result-label">
+                        INTENSITY VARIATION
+                    </div>
+
+                    <div class="result-value">
+                        {{ "%.5f"|format(result.intensity_variation) }}
+                    </div>
+
+                    <div class="result-description">
+                        Relative variation in image intensity
+                    </div>
+
+                </div>
+
+
+                <!-- CLASSIFICATION -->
+
+                <div class="result-card result-card-highlight">
+
+                    <div class="result-label">
+                        CLASSIFICATION
+                    </div>
+
+                    <div class="result-value result-category">
+                        {{ result.category }}
+                    </div>
+
+                    <div class="result-description">
+                        Heuristic UV-based classification
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 02 — SCIENTIFIC INTERPRETATION
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    02
+                </div>
+
+                <div>
+
+                    <h2>
+                        Scientific Interpretation
+                    </h2>
+
+                    <p>
+                        Interpretation of the measured UV emission.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="interpretation-panel">
+
+                <div class="interpretation-icon">
+                    ✦
+                </div>
+
+                <div class="interpretation-content">
+
+                    <div class="interpretation-title">
+                        UV Star Formation Tracer
+                    </div>
+
+                    <p>
+                        <strong>UV emission is being used as a tracer
+                        of recent star formation.</strong>
+                    </p>
+
+                    <p>
+                        The classification is based on the measured
+                        UV intensity and the number of detected bright
+                        regions.
+                    </p>
+
+                    <p>
+                        This is a heuristic classification intended to
+                        indicate the level of star-forming activity in
+                        the analyzed image.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 03 — FITS METADATA
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    03
+                </div>
+
+                <div>
+
+                    <h2>
+                        FITS Metadata
+                    </h2>
+
+                    <p>
+                        Structural and observational information
+                        extracted from the FITS header.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="metadata-grid">
+
+
+                <!-- DIMENSIONS -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        DIMENSIONS
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.dimensions }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Original FITS array dimensions
+                    </div>
+
+                </div>
+
+
+                <!-- TYPE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        TYPE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.dimension_type }}
+                    </div>
+
+                    <div class="metadata-description">
+                        FITS data structure
+                    </div>
+
+                </div>
+
+
+                <!-- ANALYSIS PLANE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        ANALYSIS PLANE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.analysis_plane }}
+                    </div>
+
+                    <div class="metadata-description">
+                        2D image plane used for analysis
+                    </div>
+
+                </div>
+
+
+                <!-- DATA TYPE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        DATA TYPE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.data_type }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Numerical representation
+                    </div>
+
+                </div>
+
+
+                <!-- INSTRUMENT -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        INSTRUMENT
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.instrument }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Observation instrument
+                    </div>
+
+                </div>
+
+
+                <!-- FILTER -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        FILTER
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.filter }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Observational filter
+                    </div>
+
+                </div>
+
+
+                <!-- EXPOSURE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        EXPOSURE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.exposure_time }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Exposure duration
+                    </div>
+
+                </div>
+
+
+                <!-- OBSERVATION DATE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        OBSERVATION DATE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.observation_date }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Date of astronomical observation
+                    </div>
+
+                </div>
+
+
+                <!-- TELESCOPE -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        TELESCOPE
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.telescope }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Observing facility
+                    </div>
+
+                </div>
+
+
+                <!-- OBJECT -->
+
+                <div class="metadata-card">
+
+                    <div class="metadata-label">
+                        OBJECT
+                    </div>
+
+                    <div class="metadata-value">
+                        {{ result.metadata.object }}
+                    </div>
+
+                    <div class="metadata-description">
+                        Target astronomical object
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 04 — IMAGE STATISTICS
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    04
+                </div>
+
+                <div>
+
+                    <h2>
+                        Image Statistics
+                    </h2>
+
+                    <p>
+                        Numerical characteristics of the processed
+                        image data.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="statistics-grid">
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        BACKGROUND
+                    </div>
+
+                    <div class="stat-value">
+                        {{ result.background }}
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        THRESHOLD
+                    </div>
+
+                    <div class="stat-value">
+                        {{ result.threshold }}
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        BRIGHT REGIONS
+                    </div>
+
+                    <div class="stat-value">
+                        {{ result.num_regions }}
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        UV INTENSITY
+                    </div>
+
+                    <div class="stat-value">
+                        {{ "%.6f"|format(result.uv_intensity) }}
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-label">
+                        INTENSITY VARIATION
+                    </div>
+
+                    <div class="stat-value">
+                        {{ "%.5f"|format(result.intensity_variation) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 05 — VISUAL ANALYSIS
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    05
+                </div>
+
+                <div>
+
+                    <h2>
+                        Visual Analysis
+                    </h2>
+
+                    <p>
+                        Original, processed and statistical views of
+                        the astronomical image.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="visual-analysis-panel">
+
+
+                <!-- IMAGE TABS -->
+
+                <div class="image-tabs">
+
+                    <button
+                        class="image-tab active"
+                        onclick="showImage('raw', this)">
+                        RAW
+                    </button>
+
+                    <button
+                        class="image-tab"
+                        onclick="showImage('processed', this)">
+                        PROCESSED
+                    </button>
+
+                    <button
+                        class="image-tab"
+                        onclick="showImage('histogram', this)">
+                        HISTOGRAM
+                    </button>
+
+                </div>
+
+
+                <!-- IMAGE DISPLAY -->
+
+                <div class="image-viewer">
+
+
+                    <!-- RAW IMAGE -->
+
+                    <div
+                        id="image-raw"
+                        class="image-container active">
+
+                        <img
+                            src="{{ url_for('output_file', filename='raw.png') }}"
+                            alt="Raw FITS image">
+
+                    </div>
+
+
+                    <!-- PROCESSED IMAGE -->
+
+                    <div
+                        id="image-processed"
+                        class="image-container">
+
+                        <img
+                            src="{{ url_for('output_file', filename='processed.png') }}"
+                            alt="Processed FITS image">
+
+                    </div>
+
+
+                    <!-- HISTOGRAM -->
+
+                    <div
+                        id="image-histogram"
+                        class="image-container">
+
+                        <img
+                            src="{{ url_for('output_file', filename='histogram.png') }}"
+                            alt="Intensity histogram">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 06 — PROCESSING PIPELINE
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    06
+                </div>
+
+                <div>
+
+                    <h2>
+                        Processing Pipeline
+                    </h2>
+
+                    <p>
+                        Python-based astronomical image processing
+                        workflow.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="pipeline">
+
+
+                <!-- STAGE 01 -->
+
+                <div class="pipeline-stage">
+
+                    <div class="pipeline-number">
+                        01
+                    </div>
+
+                    <div class="pipeline-title">
+                        FITS Input
+                    </div>
+
+                    <div class="pipeline-description">
+                        Read astronomical image data
+                    </div>
+
+                </div>
+
+
+                <!-- ARROW -->
+
+                <div class="pipeline-arrow">
+                    →
+                </div>
+
+
+                <!-- STAGE 02 -->
+
+                <div class="pipeline-stage">
+
+                    <div class="pipeline-number">
+                        02
+                    </div>
+
+                    <div class="pipeline-title">
+                        Preprocessing
+                    </div>
+
+                    <div class="pipeline-description">
+                        Background and median filtering
+                    </div>
+
+                </div>
+
+
+                <!-- ARROW -->
+
+                <div class="pipeline-arrow">
+                    →
+                </div>
+
+
+                <!-- STAGE 03 -->
+
+                <div class="pipeline-stage">
+
+                    <div class="pipeline-number">
+                        03
+                    </div>
+
+                    <div class="pipeline-title">
+                        Thresholding
+                    </div>
+
+                    <div class="pipeline-description">
+                        Automatic UV intensity threshold
+                    </div>
+
+                </div>
+
+
+                <!-- ARROW -->
+
+                <div class="pipeline-arrow">
+                    →
+                </div>
+
+
+                <!-- STAGE 04 -->
+
+                <div class="pipeline-stage">
+
+                    <div class="pipeline-number">
+                        04
+                    </div>
+
+                    <div class="pipeline-title">
+                        Region Detection
+                    </div>
+
+                    <div class="pipeline-description">
+                        Connected-component analysis
+                    </div>
+
+                </div>
+
+
+                <!-- ARROW -->
+
+                <div class="pipeline-arrow">
+                    →
+                </div>
+
+
+                <!-- STAGE 05 -->
+
+                <div class="pipeline-stage">
+
+                    <div class="pipeline-number">
+                        05
+                    </div>
+
+                    <div class="pipeline-title">
+                        Classification
+                    </div>
+
+                    <div class="pipeline-description">
+                        UV-based star formation category
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             SECTION 07 — TECHNICAL OUTPUT
+             ===================================================== -->
+
+        <section class="results-section">
+
+            <div class="section-header">
+
+                <div class="section-number">
+                    07
+                </div>
+
+                <div>
+
+                    <h2>
+                        Technical Output
+                    </h2>
+
+                    <p>
+                        Generated files from the astronomical image
+                        analysis pipeline.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="technical-output">
+
+
+                <div class="output-item">
+
+                    <div class="output-icon">
+                        IMG
+                    </div>
+
+                    <div class="output-info">
+
+                        <div class="output-name">
+                            raw.png
+                        </div>
+
+                        <div class="output-description">
+                            Raw FITS image visualization
+                        </div>
+
+                    </div>
+
+                    <a
+                        href="{{ url_for('output_file', filename='raw.png') }}"
+                        class="output-link"
+                        target="_blank">
+                        VIEW
+                    </a>
+
+                </div>
+
+
+                <div class="output-item">
+
+                    <div class="output-icon">
+                        IMG
+                    </div>
+
+                    <div class="output-info">
+
+                        <div class="output-name">
+                            processed.png
+                        </div>
+
+                        <div class="output-description">
+                            Processed UV intensity visualization
+                        </div>
+
+                    </div>
+
+                    <a
+                        href="{{ url_for('output_file', filename='processed.png') }}"
+                        class="output-link"
+                        target="_blank">
+                        VIEW
+                    </a>
+
+                </div>
+
+
+                <div class="output-item">
+
+                    <div class="output-icon">
+                        DATA
+                    </div>
+
+                    <div class="output-info">
+
+                        <div class="output-name">
+                            histogram.png
+                        </div>
+
+                        <div class="output-description">
+                            Image intensity distribution
+                        </div>
+
+                    </div>
+
+                    <a
+                        href="{{ url_for('output_file', filename='histogram.png') }}"
+                        class="output-link"
+                        target="_blank">
+                        VIEW
+                    </a>
+
+                </div>
+
+
+                <div class="output-item">
+
+                    <div class="output-icon">
+                        TXT
+                    </div>
+
+                    <div class="output-info">
+
+                        <div class="output-name">
+                            results.txt
+                        </div>
+
+                        <div class="output-description">
+                            Numerical analysis results
+                        </div>
+
+                    </div>
+
+                    <a
+                        href="{{ url_for('output_file', filename='results.txt') }}"
+                        class="output-link"
+                        target="_blank">
+                        VIEW
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             ACTIONS
+             ===================================================== -->
+
+        <section class="results-actions">
+
+            <a
+                href="{{ url_for('download', file=filename) }}"
+                class="primary-action">
+
+                <span>
+                    ↓
+                </span>
+
+                Download HTML Report
+
+            </a>
+
+
+            <a
+                href="{{ url_for('home') }}"
+                class="secondary-action">
+
+                Analyze Another FITS File
+
+            </a>
+
+        </section>
+
+
+    </main>
+
+
+
+    <!-- =========================================================
+         FOOTER
+         ========================================================= -->
+
+    <footer class="footer">
+
+        <div>
+            ASTROBROWSER
+        </div>
+
+        <div>
+            PYTHON-POWERED ASTRONOMICAL ANALYSIS
+        </div>
+
+    </footer>
+
+</div>
+
+
+
+<!-- =============================================================
+     IMAGE TAB JAVASCRIPT
+     ============================================================= -->
+
+<script>
+
+function showImage(type, button) {
+
+    /*
+     * Hide all image containers
+     */
+
+    const containers =
+        document.querySelectorAll('.image-container');
+
+    containers.forEach(function(container) {
+
+        container.classList.remove('active');
+
+    });
+
+
+    /*
+     * Remove active state from all tabs
+     */
+
+    const tabs =
+        document.querySelectorAll('.image-tab');
+
+    tabs.forEach(function(tab) {
+
+        tab.classList.remove('active');
+
+    });
+
+
+    /*
+     * Show selected image
+     */
+
+    const selectedImage =
+        document.getElementById('image-' + type);
+
+    if (selectedImage) {
+
+        selectedImage.classList.add('active');
+
+    }
+
+
+    /*
+     * Highlight selected tab
+     */
+
+    if (button) {
+
+        button.classList.add('active');
+
+    }
+
+}
+
+</script>
+
+
+</body>
+</html>
