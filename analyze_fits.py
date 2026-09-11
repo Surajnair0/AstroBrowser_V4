@@ -104,10 +104,8 @@ def validate_fits_file(fits_file):
                     "The FITS image contains no valid finite pixel values."
                 )
 
-            valid_pixels = img[finite_pixels]
-
             # Reject completely zero images
-            if np.all(valid_pixels == 0):
+            if np.all(img == 0):
                 raise ValueError(
                     "The FITS image contains no detectable signal. "
                     "All valid pixels are zero."
@@ -823,25 +821,25 @@ def analyze_fits(fits_file):
     # UV INTENSITY
     # ---------------------------------------------------------
 
-    positive_pixels = img_norm[
-        img_norm > 0
-    ]
+    positive_mask = img_norm > 0
 
-    if positive_pixels.size == 0:
+    if not np.any(positive_mask):
 
         uv_intensity = 0.0
-
         intensity_variation = 0.0
 
-    else:
+    else:   
 
         uv_intensity = np.sum(
-            positive_pixels
+            img_norm,
+            where=positive_mask
         )
 
         intensity_variation = np.std(
-            positive_pixels
+            img_norm[positive_mask]
         )
+
+    del positive_mask
 
     # ---------------------------------------------------------
     # STAR FORMATION CLASSIFICATION
@@ -900,19 +898,17 @@ def analyze_fits(fits_file):
         average_region_size=average_region_size
     )
 
-    # ---------------------------------------------------------
-    # HISTOGRAM
-    # ---------------------------------------------------------
+        # ---------------------------------------------------------
+        # HISTOGRAM
+        # ---------------------------------------------------------
 
-    signal_pixels = img_filtered[
-        img_filtered > 0
-    ]
+    signal_mask = img_filtered > 0
 
     plt.figure(
         figsize=(8, 6)
     )
 
-    if signal_pixels.size == 0:
+    if not np.any(signal_mask):
 
         plt.text(
             0.2,
@@ -925,7 +921,7 @@ def analyze_fits(fits_file):
     else:
 
         histogram_values = np.log10(
-            signal_pixels + 1e-6
+            img_filtered[signal_mask] + 1e-6
         )
 
         plt.hist(
@@ -948,6 +944,10 @@ def analyze_fits(fits_file):
         plt.grid(
             True
         )
+
+        del histogram_values
+
+    del signal_mask
 
     plt.tight_layout()
 
