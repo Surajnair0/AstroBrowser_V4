@@ -573,7 +573,7 @@ def analyze_fits(fits_file):
 
             img = np.array(
                 raw_data,
-                dtype=np.float64,
+                dtype=np.float32,
                 copy=True
             )
 
@@ -616,35 +616,17 @@ def analyze_fits(fits_file):
     # background subtraction and normalization.
     # =========================================================
 
-    valid_pixels = img[
-        np.isfinite(img)
-    ]
-
-    if valid_pixels.size == 0:
+    if img.size == 0:
 
         raise RuntimeError(
             "Image contains no valid pixel values."
         )
 
-    minimum_intensity = np.min(
-        valid_pixels
-    )
-
-    maximum_intensity = np.max(
-        valid_pixels
-    )
-
-    mean_intensity = np.mean(
-        valid_pixels
-    )
-
-    median_intensity = np.median(
-        valid_pixels
-    )
-
-    standard_deviation = np.std(
-        valid_pixels
-    )
+    minimum_intensity = np.min(img)
+    maximum_intensity = np.max(img)
+    mean_intensity = np.mean(img)
+    median_intensity = np.median(img)
+    standard_deviation = np.std(img)
 
     total_pixels = img.size
 
@@ -691,26 +673,21 @@ def analyze_fits(fits_file):
     # BACKGROUND SUBTRACTION
     # ---------------------------------------------------------
 
-    background = np.median(
-        img
-    )
+    background = np.median(img)
 
-    img_clean = (
-        img - background
-    )
-
-    img_clean[
-        img_clean < 0
-    ] = 0
+    img -= background
+    img[img < 0] = 0
 
     # ---------------------------------------------------------
     # MEDIAN FILTER
     # ---------------------------------------------------------
 
     img_filtered = median_filter(
-        img_clean,
+        img,
         size=(3, 3)
     )
+
+    del img
 
     # ---------------------------------------------------------
     # NORMALIZATION
@@ -726,9 +703,8 @@ def analyze_fits(fits_file):
             "Image contains no useful signal."
         )
 
-    img_norm = (
-        img_filtered / mx
-    )
+    img_filtered /= mx
+    img_norm = img_filtered
 
     # ---------------------------------------------------------
     # PROCESSED IMAGE
