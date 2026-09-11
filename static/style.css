@@ -2158,3 +2158,46 @@ input[type="file"] {
         width: 100%;
     }
 }
+
+
+/* =========================================================
+   CHUNKED UPLOAD PROGRESS
+   ========================================================= */
+
+.upload-status {
+    min-height: 17px;
+    margin-top: 14px;
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.upload-progress {
+    display: none;
+    width: 100%;
+    max-width: 420px;
+    height: 3px;
+    margin: 10px auto 0;
+    overflow: hidden;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.upload-progress.active {
+    display: block;
+}
+
+.upload-progress-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+    transition: width 0.15s ease;
+}
+
+.primary-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+}

@@ -51,9 +51,7 @@
 
 
             <form
-                action="/upload"
-                method="POST"
-                enctype="multipart/form-data"
+                id="upload-form"
                 class="upload-form"
             >
 
@@ -90,11 +88,29 @@
 
                     <button
                         type="submit"
+                        id="analyze-button"
                         class="primary-button"
                     >
                         Analyze FITS File
                         <span>→</span>
                     </button>
+
+                    <div
+                        id="upload-status"
+                        class="upload-status"
+                        aria-live="polite"
+                    ></div>
+
+                    <div
+                        id="upload-progress"
+                        class="upload-progress"
+                        aria-hidden="true"
+                    >
+                        <div
+                            id="upload-progress-bar"
+                            class="upload-progress-bar"
+                        ></div>
+                    </div>
 
                     <div class="file-note">
                         Supported format: .fits
@@ -171,6 +187,22 @@
         const fileName =
             document.getElementById("file-name");
 
+        const uploadForm =
+            document.getElementById("upload-form");
+
+        const analyzeButton =
+            document.getElementById("analyze-button");
+
+        const uploadStatus =
+            document.getElementById("upload-status");
+
+        const uploadProgress =
+            document.getElementById("upload-progress");
+
+        const uploadProgressBar =
+            document.getElementById("upload-progress-bar");
+
+
         fileInput.addEventListener(
             "change",
             function () {
@@ -191,6 +223,211 @@
 
                     fileName.classList.remove(
                         "file-selected"
+                    );
+                }
+
+            }
+        );
+
+
+        uploadForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                const file =
+                    fileInput.files[0];
+
+                if (!file) {
+
+                    uploadStatus.textContent =
+                        "Please select a FITS file.";
+
+                    return;
+                }
+
+                if (
+                    !file.name
+                        .toLowerCase()
+                        .endsWith(".fits")
+                ) {
+
+                    uploadStatus.textContent =
+                        "Please select a .fits file.";
+
+                    return;
+                }
+
+
+                const CHUNK_SIZE =
+                    4 * 1024 * 1024;
+
+                const totalChunks =
+                    Math.ceil(
+                        file.size / CHUNK_SIZE
+                    );
+
+                const uploadId =
+                    crypto.randomUUID()
+                        .replace(/-/g, "");
+
+                analyzeButton.disabled = true;
+
+                analyzeButton.innerHTML =
+                    'Uploading… <span>↑</span>';
+
+                uploadProgress.classList.add(
+                    "active"
+                );
+
+                uploadProgressBar.style.width =
+                    "0%";
+
+                uploadStatus.textContent =
+                    `Preparing upload of ${totalChunks} chunks…`;
+
+
+                try {
+
+                    for (
+                        let chunkIndex = 0;
+                        chunkIndex < totalChunks;
+                        chunkIndex++
+                    ) {
+
+                        const start =
+                            chunkIndex * CHUNK_SIZE;
+
+                        const end =
+                            Math.min(
+                                start + CHUNK_SIZE,
+                                file.size
+                            );
+
+                        const chunk =
+                            file.slice(
+                                start,
+                                end
+                            );
+
+
+                        uploadStatus.textContent =
+                            `Uploading chunk ${chunkIndex + 1} of ${totalChunks}…`;
+
+
+                        const response =
+                            await fetch(
+                                "/upload-chunk",
+                                {
+                                    method: "POST",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/octet-stream",
+
+                                        "X-Upload-ID":
+                                            uploadId,
+
+                                        "X-Filename":
+                                            file.name,
+
+                                        "X-Chunk-Index":
+                                            String(chunkIndex),
+
+                                        "X-Total-Chunks":
+                                            String(totalChunks),
+
+                                        "X-File-Size":
+                                            String(file.size)
+                                    },
+
+                                    body: chunk
+                                }
+                            );
+
+
+                        if (!response.ok) {
+
+                            let message =
+                                "Upload failed.";
+
+                            try {
+
+                                const data =
+                                    await response.json();
+
+                                if (data.error) {
+                                    message =
+                                        data.error;
+                                }
+
+                            } catch (error) {
+                                // Keep the generic message.
+                            }
+
+                            throw new Error(message);
+                        }
+
+
+                        const percent =
+                            Math.round(
+                                ((chunkIndex + 1) /
+                                    totalChunks) * 100
+                            );
+
+                        uploadProgressBar.style.width =
+                            `${percent}%`;
+                    }
+
+
+                    uploadStatus.textContent =
+                        "Upload complete. Starting scientific analysis…";
+
+                    analyzeButton.innerHTML =
+                        'Analyzing… <span>⟳</span>';
+
+
+                    const response =
+                        await fetch(
+                            `/analyze-upload?upload_id=${encodeURIComponent(uploadId)}&filename=${encodeURIComponent(file.name)}`,
+                            {
+                                method: "GET"
+                            }
+                        );
+
+
+                    const html =
+                        await response.text();
+
+
+                    if (!response.ok) {
+                        throw new Error(
+                            "Analysis could not be completed."
+                        );
+                    }
+
+
+                    document.open();
+                    document.write(html);
+                    document.close();
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    uploadStatus.textContent =
+                        error.message ||
+                        "Upload or analysis failed.";
+
+                    analyzeButton.disabled = false;
+
+                    analyzeButton.innerHTML =
+                        'Analyze FITS File <span>→</span>';
+
+                    uploadProgress.classList.remove(
+                        "active"
                     );
                 }
 

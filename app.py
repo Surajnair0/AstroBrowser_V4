@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 import os
 import base64
+import re
 
 from analyze_fits import analyze_fits
 
@@ -33,51 +34,222 @@ def home():
 # FITS UPLOAD + ANALYSIS
 # =========================================================
 
-@app.route("/upload", methods=["POST"])
-def upload():
+# =========================================================
+# CHUNKED FITS UPLOAD
+# =========================================================
 
-    file = request.files.get("fitsfile")
+UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
+MAX_UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024
+UPLOAD_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 
-    # -----------------------------------------------------
-    # Check that a file was selected
-    # -----------------------------------------------------
 
-    if file is None or file.filename == "":
+def validate_upload_metadata(upload_id, filename, chunk_index, total_chunks):
 
-        return render_template(
-            "error.html",
-            error="No FITS file was selected."
-        )
+    if not upload_id or not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+        return "Invalid upload identifier."
 
-    # -----------------------------------------------------
-    # Secure the filename
-    # -----------------------------------------------------
-
-    filename = secure_filename(
-        file.filename
-    )
+    filename = secure_filename(filename or "")
 
     if filename == "":
-
-        return render_template(
-            "error.html",
-            error="Invalid file name."
-        )
-
-    # -----------------------------------------------------
-    # Check FITS extension
-    # -----------------------------------------------------
+        return "Invalid file name."
 
     if not filename.lower().endswith(".fits"):
+        return "Invalid file type. Please upload a .fits file."
 
-        return render_template(
-            "error.html",
-            error="Invalid file type. Please upload a .fits file."
+    try:
+        chunk_index = int(chunk_index)
+        total_chunks = int(total_chunks)
+    except (TypeError, ValueError):
+        return "Invalid upload chunk information."
+
+    if total_chunks < 1 or chunk_index < 0 or chunk_index >= total_chunks:
+        return "Invalid upload chunk information."
+
+    return None
+
+
+@app.route("/upload-chunk", methods=["POST"])
+def upload_chunk():
+
+    upload_id = request.headers.get("X-Upload-ID", "")
+    filename = request.headers.get("X-Filename", "")
+    chunk_index = request.headers.get("X-Chunk-Index")
+    total_chunks = request.headers.get("X-Total-Chunks")
+
+    error = validate_upload_metadata(
+        upload_id,
+        filename,
+        chunk_index,
+        total_chunks
+    )
+
+    if error:
+        return {"error": error}, 400
+
+    filename = secure_filename(filename)
+    chunk_index = int(chunk_index)
+    total_chunks = int(total_chunks)
+
+    try:
+        expected_file_size = int(
+            request.headers.get("X-File-Size", "0")
+        )
+    except ValueError:
+        return {"error": "Invalid file size."}, 400
+
+    if expected_file_size < 1:
+        return {"error": "Invalid file size."}, 400
+
+    content_length = request.content_length
+
+    if content_length is not None and content_length > MAX_UPLOAD_CHUNK_SIZE:
+        return {"error": "Upload chunk is too large."}, 413
+
+    partial_path = os.path.abspath(
+        os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            f".{upload_id}.part"
+        )
+    )
+
+    final_path = os.path.abspath(
+        os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            filename
+        )
+    )
+
+    # -----------------------------------------------------
+    # Write only this small chunk to disk.
+    # The complete FITS file is never held in RAM by Flask.
+    # -----------------------------------------------------
+
+    if chunk_index == 0:
+        file_mode = "wb"
+    else:
+        if not os.path.exists(partial_path):
+            return {"error": "Upload session was not initialized."}, 400
+        file_mode = "ab"
+
+    try:
+
+        bytes_written = 0
+
+        with open(partial_path, file_mode) as destination:
+
+            while True:
+
+                chunk = request.stream.read(
+                    min(
+                        UPLOAD_CHUNK_SIZE,
+                        1024 * 1024
+                    )
+                )
+
+                if not chunk:
+                    break
+
+                destination.write(chunk)
+                bytes_written += len(chunk)
+
+                if bytes_written > MAX_UPLOAD_CHUNK_SIZE:
+                    return {
+                        "error": "Upload chunk is too large."
+                    }, 413
+
+    except Exception as e:
+
+        print("Chunk upload error:")
+        print(e)
+
+        return {
+            "error": "Unable to write upload chunk."
+        }, 500
+
+    if chunk_index < total_chunks - 1:
+
+        return {
+            "success": True,
+            "complete": False,
+            "chunk": chunk_index + 1
+        }
+
+    # -----------------------------------------------------
+    # Final chunk: verify the assembled file, then move it
+    # into the normal upload path. Scientific analysis is
+    # performed by the separate analyze-upload request.
+    # -----------------------------------------------------
+
+    try:
+
+        actual_file_size = os.path.getsize(
+            partial_path
         )
 
-    # -----------------------------------------------------
-    # Create safe file path
-    # -----------------------------------------------------
+        if actual_file_size != expected_file_size:
+
+            os.remove(
+                partial_path
+            )
+
+            return {
+                "error": "Uploaded file size does not match the original file."
+            }, 400
+
+        os.replace(
+            partial_path,
+            final_path
+        )
+
+        print(
+            f"Chunked FITS upload complete: {filename}"
+        )
+
+        return {
+            "success": True,
+            "complete": True
+        }
+
+    except Exception as e:
+
+        print(
+            "Upload finalization error:"
+        )
+
+        print(e)
+
+        return {
+            "error": "Unable to finalize the uploaded FITS file."
+        }, 500
+
+
+@app.route("/analyze-upload", methods=["GET"])
+def analyze_upload():
+
+    upload_id = request.args.get(
+        "upload_id",
+        ""
+    )
+
+    filename = secure_filename(
+        request.args.get(
+            "filename",
+            ""
+        )
+    )
+
+    error = validate_upload_metadata(
+        upload_id,
+        filename,
+        "0",
+        "1"
+    )
+
+    if error:
+        return render_template(
+            "error.html",
+            error=error
+        )
 
     filepath = os.path.abspath(
         os.path.join(
@@ -86,21 +258,17 @@ def upload():
         )
     )
 
-    # -----------------------------------------------------
-    # Save uploaded FITS file
-    # -----------------------------------------------------
-
-    file.save(filepath)
+    if not os.path.exists(filepath):
+        return render_template(
+            "error.html",
+            error="Uploaded FITS file is no longer available."
+        )
 
     try:
 
         print(
             f"Running Python FITS analysis on: {filename}"
         )
-
-        # =================================================
-        # RUN PYTHON ANALYSIS
-        # =================================================
 
         result = analyze_fits(
             filepath
@@ -109,10 +277,6 @@ def upload():
         print(
             "Analysis finished!"
         )
-
-        # =================================================
-        # READ RESULTS
-        # =================================================
 
         results_path = os.path.join(
             OUTPUT_FOLDER,
@@ -126,10 +290,6 @@ def upload():
         ) as f:
 
             results = f.read()
-
-        # =================================================
-        # DISPLAY RESULTS PAGE
-        # =================================================
 
         return render_template(
             "results.html",
