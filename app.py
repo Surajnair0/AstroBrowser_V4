@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 import os
 import base64
 import re
-
+import time
 from analyze_fits import analyze_fits
 
 
@@ -25,10 +25,11 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 @app.route("/")
 def home():
 
+    cleanup_temporary_data()
+
     return render_template(
         "index.html"
     )
-
 
 # =========================================================
 # FITS UPLOAD + ANALYSIS
@@ -41,7 +42,110 @@ def home():
 UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
 MAX_UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024
 UPLOAD_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
+# =========================================================
+# TEMPORARY DATA CLEANUP
+# =========================================================
 
+STALE_PART_MAX_AGE = 60 * 60  # 1 hour
+
+
+def cleanup_temporary_data():
+    """
+    Remove temporary FITS files and generated analysis outputs.
+
+    This application is intended to process data temporarily rather
+    than act as a permanent data-storage service.
+    """
+
+    # -----------------------------------------------------
+    # Remove uploaded FITS files and abandoned .part files
+    # -----------------------------------------------------
+
+    if os.path.exists(UPLOAD_FOLDER):
+
+        for filename in os.listdir(UPLOAD_FOLDER):
+
+            filepath = os.path.join(
+                UPLOAD_FOLDER,
+                filename
+            )
+
+            if not os.path.isfile(filepath):
+                continue
+
+            # Abandoned chunked uploads
+            if filename.startswith(".") and filename.endswith(".part"):
+
+                try:
+
+                    file_age = (
+                        time.time()
+                        - os.path.getmtime(filepath)
+                    )
+
+                    if file_age > STALE_PART_MAX_AGE:
+
+                        os.remove(filepath)
+
+                        print(
+                            f"Removed stale upload: {filename}"
+                        )
+
+                except OSError as e:
+
+                    print(
+                        f"Unable to remove stale upload {filename}: {e}"
+                    )
+
+                continue
+
+            # Completed temporary FITS files
+            if filename.lower().endswith(".fits"):
+
+                try:
+
+                    os.remove(filepath)
+
+                    print(
+                        f"Removed temporary FITS: {filename}"
+                    )
+
+                except OSError as e:
+
+                    print(
+                        f"Unable to remove temporary FITS {filename}: {e}"
+                    )
+
+
+    # -----------------------------------------------------
+    # Remove generated analysis outputs
+    # -----------------------------------------------------
+
+    if os.path.exists(OUTPUT_FOLDER):
+
+        for filename in os.listdir(OUTPUT_FOLDER):
+
+            filepath = os.path.join(
+                OUTPUT_FOLDER,
+                filename
+            )
+
+            if not os.path.isfile(filepath):
+                continue
+
+            try:
+
+                os.remove(filepath)
+
+                print(
+                    f"Removed temporary output: {filename}"
+                )
+
+            except OSError as e:
+
+                print(
+                    f"Unable to remove output {filename}: {e}"
+                )
 
 def validate_upload_metadata(upload_id, filename, chunk_index, total_chunks):
 
