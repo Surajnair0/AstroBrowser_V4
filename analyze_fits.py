@@ -426,7 +426,7 @@ def prepare_display_image(img, max_pixels=4_000_000):
 # MAIN FITS ANALYSIS
 # =============================================================
 
-def analyze_fits(fits_file):
+def analyze_fits(fits_file, out_dir):
 
     # ---------------------------------------------------------
     # VALIDATE FITS FILE
@@ -437,15 +437,6 @@ def analyze_fits(fits_file):
     # ---------------------------------------------------------
     # OUTPUT DIRECTORY
     # ---------------------------------------------------------
-
-    base_dir = os.path.dirname(
-        os.path.abspath(__file__)
-    )
-
-    out_dir = os.path.join(
-        base_dir,
-        "outputs"
-    )
 
     os.makedirs(
         out_dir,

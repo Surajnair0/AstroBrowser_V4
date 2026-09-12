@@ -1,14 +1,18 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
 import os
 import base64
 import re
 import time
+import secrets
+import shutil
 from analyze_fits import analyze_fits
 
 
 app = Flask(__name__)
-
+app.secret_key = os.environ.get(
+    "ASTROBROWSER_SECRET_KEY"
+) or secrets.token_hex(32)
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
 
@@ -24,7 +28,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
-
+    delete_owned_analysis_data()
     cleanup_temporary_data()
 
     return render_template(
@@ -42,6 +46,103 @@ def home():
 UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
 MAX_UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024
 UPLOAD_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
+def get_owned_upload_ids():
+    """
+    Return the analysis IDs owned by this browser session.
+    """
+
+    upload_ids = session.get("upload_ids", [])
+
+    if not isinstance(upload_ids, list):
+        return []
+
+    return [
+        upload_id
+        for upload_id in upload_ids
+        if UPLOAD_ID_PATTERN.fullmatch(upload_id)
+    ]
+
+
+def register_upload(upload_id):
+    """
+    Register an upload ID as belonging to this browser session.
+    """
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+        return False
+
+    upload_ids = get_owned_upload_ids()
+
+    if upload_id in upload_ids:
+        return False
+
+    upload_ids.append(upload_id)
+    session["upload_ids"] = upload_ids
+    session.modified = True
+
+    return True
+
+
+def owns_upload(upload_id):
+    """
+    Check whether this browser session owns the analysis.
+    """
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+        return False
+
+    return upload_id in get_owned_upload_ids()
+
+
+def delete_owned_analysis_data():
+    """
+    Delete all temporary analysis data belonging to this browser session.
+    """
+
+    upload_ids = get_owned_upload_ids()
+
+    for upload_id in upload_ids:
+
+        upload_dir = os.path.abspath(
+            os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                upload_id
+            )
+        )
+
+        output_dir = os.path.abspath(
+            os.path.join(
+                OUTPUT_FOLDER,
+                upload_id
+            )
+        )
+
+        if os.path.isdir(upload_dir):
+            try:
+                shutil.rmtree(upload_dir)
+                print(
+                    f"Removed session upload: {upload_id}"
+                )
+            except OSError as e:
+                print(
+                    f"Unable to remove session upload "
+                    f"{upload_id}: {e}"
+                )
+
+        if os.path.isdir(output_dir):
+            try:
+                shutil.rmtree(output_dir)
+                print(
+                    f"Removed session output: {upload_id}"
+                )
+            except OSError as e:
+                print(
+                    f"Unable to remove session output "
+                    f"{upload_id}: {e}"
+                )
+
+    session.pop("upload_ids", None)
+    session.modified = True
 # =========================================================
 # TEMPORARY DATA CLEANUP
 # =========================================================
@@ -49,16 +150,54 @@ UPLOAD_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 STALE_PART_MAX_AGE = 60 * 60  # 1 hour
 
 
+def touch_analysis_activity(upload_id):
+    """
+    Refresh the activity timestamp for an active analysis.
+    """
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+        return
+
+    current_time = time.time()
+
+    for root in (UPLOAD_FOLDER, OUTPUT_FOLDER):
+
+        analysis_dir = os.path.join(
+            root,
+            upload_id
+        )
+
+        if os.path.isdir(analysis_dir):
+
+            try:
+
+                os.utime(
+                    analysis_dir,
+                    (current_time, current_time)
+                )
+
+            except OSError as e:
+
+                print(
+                    f"Unable to refresh activity for {upload_id}: {e}"
+                )
+
+
 def cleanup_temporary_data():
     """
     Remove temporary FITS files and generated analysis outputs.
 
-    This application is intended to process data temporarily rather
-    than act as a permanent data-storage service.
+    Each analysis is isolated by its upload_id. Only analysis
+    directories that have been inactive for longer than the stale
+    threshold are removed.
     """
 
+    import shutil
+
+    current_time = time.time()
+
     # -----------------------------------------------------
-    # Remove uploaded FITS files and abandoned .part files
+    # Remove abandoned chunked uploads
     # -----------------------------------------------------
 
     if os.path.exists(UPLOAD_FOLDER):
@@ -70,16 +209,16 @@ def cleanup_temporary_data():
                 filename
             )
 
+            # Analysis directories are handled separately below.
             if not os.path.isfile(filepath):
                 continue
 
-            # Abandoned chunked uploads
             if filename.startswith(".") and filename.endswith(".part"):
 
                 try:
 
                     file_age = (
-                        time.time()
+                        current_time
                         - os.path.getmtime(filepath)
                     )
 
@@ -97,54 +236,115 @@ def cleanup_temporary_data():
                         f"Unable to remove stale upload {filename}: {e}"
                     )
 
-                continue
-
-            # Completed temporary FITS files
-            if filename.lower().endswith(".fits"):
-
-                try:
-
-                    os.remove(filepath)
-
-                    print(
-                        f"Removed temporary FITS: {filename}"
-                    )
-
-                except OSError as e:
-
-                    print(
-                        f"Unable to remove temporary FITS {filename}: {e}"
-                    )
-
-
     # -----------------------------------------------------
-    # Remove generated analysis outputs
+    # Find stale analysis upload directories
     # -----------------------------------------------------
 
-    if os.path.exists(OUTPUT_FOLDER):
+    stale_upload_ids = set()
 
-        for filename in os.listdir(OUTPUT_FOLDER):
+    if os.path.exists(UPLOAD_FOLDER):
 
-            filepath = os.path.join(
-                OUTPUT_FOLDER,
-                filename
+        for upload_id in os.listdir(UPLOAD_FOLDER):
+
+            analysis_dir = os.path.join(
+                UPLOAD_FOLDER,
+                upload_id
             )
 
-            if not os.path.isfile(filepath):
+            if not os.path.isdir(analysis_dir):
+                continue
+
+            if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
                 continue
 
             try:
 
-                os.remove(filepath)
-
-                print(
-                    f"Removed temporary output: {filename}"
+                file_age = (
+                    current_time
+                    - os.path.getmtime(analysis_dir)
                 )
+
+                if file_age > STALE_PART_MAX_AGE:
+
+                    shutil.rmtree(
+                        analysis_dir
+                    )
+
+                    stale_upload_ids.add(
+                        upload_id
+                    )
+
+                    print(
+                        f"Removed stale analysis upload: {upload_id}"
+                    )
 
             except OSError as e:
 
                 print(
-                    f"Unable to remove output {filename}: {e}"
+                    f"Unable to remove analysis upload {upload_id}: {e}"
+                )
+
+    # -----------------------------------------------------
+    # Remove stale or orphaned analysis outputs
+    # -----------------------------------------------------
+
+    if os.path.exists(OUTPUT_FOLDER):
+
+        for upload_id in os.listdir(OUTPUT_FOLDER):
+
+            output_dir = os.path.join(
+                OUTPUT_FOLDER,
+                upload_id
+            )
+
+            if not os.path.isdir(output_dir):
+                continue
+
+            if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+                continue
+
+            try:
+
+                upload_dir = os.path.join(
+                    UPLOAD_FOLDER,
+                    upload_id
+                )
+
+                # Upload directory was already identified as stale.
+                if upload_id in stale_upload_ids:
+
+                    shutil.rmtree(
+                        output_dir
+                    )
+
+                    print(
+                        f"Removed stale analysis output: {upload_id}"
+                    )
+
+                    continue
+
+                # Output directory has no corresponding upload.
+                if not os.path.exists(upload_dir):
+
+                    file_age = (
+                        current_time
+                        - os.path.getmtime(output_dir)
+                    )
+
+                    if file_age > STALE_PART_MAX_AGE:
+
+                        shutil.rmtree(
+                            output_dir
+                        )
+
+                        print(
+                            f"Removed orphaned analysis output: {upload_id}"
+                        )
+
+            except OSError as e:
+
+                print(
+                    f"Unable to remove analysis output {upload_id}: {e}"
                 )
 
 def validate_upload_metadata(upload_id, filename, chunk_index, total_chunks):
@@ -171,7 +371,6 @@ def validate_upload_metadata(upload_id, filename, chunk_index, total_chunks):
 
     return None
 
-
 @app.route("/upload-chunk", methods=["POST"])
 def upload_chunk():
 
@@ -194,6 +393,33 @@ def upload_chunk():
     chunk_index = int(chunk_index)
     total_chunks = int(total_chunks)
 
+    # ---------------------------------------------------------
+# VALIDATE UPLOAD SESSION OWNERSHIP
+# ---------------------------------------------------------
+
+    if owns_upload(upload_id):
+    # This browser already owns the upload.
+    # Allow retries, including a retry of chunk 0.
+        pass
+
+    elif chunk_index == 0:
+    # First chunk creates/registers a new upload session.
+        if not register_upload(upload_id):
+            return {
+                "error": "Unable to create upload session."
+            }, 500
+
+    else:
+    # Chunks after chunk 0 must belong to an existing
+    # upload session owned by this browser.
+        return {
+            "error": "This upload session is not available."
+        }, 403
+
+    # ---------------------------------------------------------
+    # VALIDATE FILE SIZE
+    # ---------------------------------------------------------
+
     try:
         expected_file_size = int(
             request.headers.get("X-File-Size", "0")
@@ -206,22 +432,54 @@ def upload_chunk():
 
     content_length = request.content_length
 
-    if content_length is not None and content_length > MAX_UPLOAD_CHUNK_SIZE:
-        return {"error": "Upload chunk is too large."}, 413
+    if (
+        content_length is not None
+        and content_length > MAX_UPLOAD_CHUNK_SIZE
+    ):
+        return {
+            "error": "Upload chunk is too large."
+        }, 413
+
+    # -----------------------------------------------------
+    # PRIVATE UPLOAD WORKSPACE
+    # -----------------------------------------------------
+
+    upload_dir = os.path.abspath(
+        os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            upload_id
+        )
+    )
+
+    os.makedirs(
+        upload_dir,
+        exist_ok=True
+    )
 
     partial_path = os.path.abspath(
         os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            f".{upload_id}.part"
+            upload_dir,
+            ".upload.part"
         )
     )
 
     final_path = os.path.abspath(
         os.path.join(
-            app.config["UPLOAD_FOLDER"],
+            upload_dir,
             filename
         )
     )
+
+    # -----------------------------------------------------
+    # SECURITY CHECK
+    # -----------------------------------------------------
+
+    if not partial_path.startswith(
+        upload_dir + os.sep
+    ) or not final_path.startswith(
+        upload_dir + os.sep
+    ):
+        return {"error": "Invalid upload path."}, 400
 
     # -----------------------------------------------------
     # Write only this small chunk to disk.
@@ -232,14 +490,20 @@ def upload_chunk():
         file_mode = "wb"
     else:
         if not os.path.exists(partial_path):
-            return {"error": "Upload session was not initialized."}, 400
+            return {
+                "error": "Upload session was not initialized."
+            }, 400
+
         file_mode = "ab"
 
     try:
 
         bytes_written = 0
 
-        with open(partial_path, file_mode) as destination:
+        with open(
+            partial_path,
+            file_mode
+        ) as destination:
 
             while True:
 
@@ -257,13 +521,17 @@ def upload_chunk():
                 bytes_written += len(chunk)
 
                 if bytes_written > MAX_UPLOAD_CHUNK_SIZE:
+
                     return {
                         "error": "Upload chunk is too large."
                     }, 413
 
     except Exception as e:
 
-        print("Chunk upload error:")
+        print(
+            "Chunk upload error:"
+        )
+
         print(e)
 
         return {
@@ -280,8 +548,7 @@ def upload_chunk():
 
     # -----------------------------------------------------
     # Final chunk: verify the assembled file, then move it
-    # into the normal upload path. Scientific analysis is
-    # performed by the separate analyze-upload request.
+    # into this upload's private workspace.
     # -----------------------------------------------------
 
     try:
@@ -297,7 +564,10 @@ def upload_chunk():
             )
 
             return {
-                "error": "Uploaded file size does not match the original file."
+                "error": (
+                    "Uploaded file size does not match "
+                    "the original file."
+                )
             }, 400
 
         os.replace(
@@ -325,7 +595,6 @@ def upload_chunk():
         return {
             "error": "Unable to finalize the uploaded FITS file."
         }, 500
-
 
 @app.route("/analyze-upload", methods=["GET"])
 def analyze_upload():
@@ -355,18 +624,69 @@ def analyze_upload():
             error=error
         )
 
-    filepath = os.path.abspath(
+    # ---------------------------------------------------------
+    # SESSION OWNERSHIP CHECK
+    # ---------------------------------------------------------
+
+    if not owns_upload(upload_id):
+        return render_template(
+            "error.html",
+            error="This analysis session is not available."
+        ), 403
+
+    # ---------------------------------------------------------
+    # PRIVATE ANALYSIS WORKSPACE
+    # ---------------------------------------------------------
+
+    analysis_dir = os.path.abspath(
         os.path.join(
             app.config["UPLOAD_FOLDER"],
+            upload_id
+        )
+    )
+
+    filepath = os.path.abspath(
+        os.path.join(
+            analysis_dir,
             filename
         )
     )
 
-    if not os.path.exists(filepath):
+    # ---------------------------------------------------------
+    # SECURITY CHECK
+    # ---------------------------------------------------------
+
+    if not filepath.startswith(
+        analysis_dir + os.sep
+    ):
+        return render_template(
+            "error.html",
+            error="Invalid upload path."
+        )
+
+    if not os.path.isfile(filepath):
         return render_template(
             "error.html",
             error="Uploaded FITS file is no longer available."
         )
+
+    # ---------------------------------------------------------
+    # PRIVATE OUTPUT DIRECTORY
+    # ---------------------------------------------------------
+
+    output_dir = os.path.abspath(
+        os.path.join(
+            OUTPUT_FOLDER,
+            upload_id
+        )
+    )
+
+    touch_analysis_activity(upload_id)
+
+    os.makedirs(
+        output_dir,
+        exist_ok=True
+    )
 
     try:
 
@@ -375,7 +695,8 @@ def analyze_upload():
         )
 
         result = analyze_fits(
-            filepath
+            filepath,
+            output_dir
         )
 
         print(
@@ -383,7 +704,7 @@ def analyze_upload():
         )
 
         results_path = os.path.join(
-            OUTPUT_FOLDER,
+            output_dir,
             "results.txt"
         )
 
@@ -399,7 +720,8 @@ def analyze_upload():
             "results.html",
             results=results,
             filename=filename,
-            result=result
+            result=result,
+            upload_id=upload_id
         )
 
     except Exception as e:
@@ -413,19 +735,78 @@ def analyze_upload():
         return render_template(
             "error.html",
             error=str(e)
-        )
+        ), 500
 
 
 # =========================================================
 # OUTPUT FILES
 # =========================================================
 
-@app.route("/outputs/<filename>")
-def output_file(filename):
+@app.route("/outputs/<upload_id>/<filename>")
+def output_file(upload_id, filename):
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+
+        return render_template(
+            "error.html",
+            error="Invalid analysis identifier."
+        ), 400
+
+    # ---------------------------------------------------------
+    # SESSION OWNERSHIP CHECK
+    # ---------------------------------------------------------
+
+    if not owns_upload(upload_id):
+
+        return render_template(
+            "error.html",
+            error="This analysis session is not available."
+        ), 403
+
+    safe_filename = secure_filename(filename)
+
+    if safe_filename != filename:
+
+        return render_template(
+            "error.html",
+            error="Invalid output file."
+        ), 400
+
+    output_dir = os.path.abspath(
+        os.path.join(
+            OUTPUT_FOLDER,
+            upload_id
+        )
+    )
+
+    output_path = os.path.abspath(
+        os.path.join(
+            output_dir,
+            safe_filename
+        )
+    )
+
+    if not output_path.startswith(
+        output_dir + os.sep
+    ):
+
+        return render_template(
+            "error.html",
+            error="Invalid output path."
+        ), 400
+
+    if not os.path.isfile(output_path):
+
+        return render_template(
+            "error.html",
+            error="Requested analysis output is no longer available."
+        ), 404
+
+    touch_analysis_activity(upload_id)
 
     return send_from_directory(
-        OUTPUT_FOLDER,
-        filename
+        output_dir,
+        safe_filename
     )
 
 
@@ -435,6 +816,37 @@ def output_file(filename):
 
 @app.route("/download")
 def download():
+
+    # -----------------------------------------------------
+    # Get analysis identifier
+    # -----------------------------------------------------
+
+    upload_id = request.args.get(
+        "upload_id",
+        ""
+    )
+
+    # -----------------------------------------------------
+    # Validate analysis identifier
+    # -----------------------------------------------------
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+
+        return render_template(
+            "error.html",
+            error="Invalid analysis identifier."
+        ), 400
+
+    # -----------------------------------------------------
+    # SESSION OWNERSHIP CHECK
+    # -----------------------------------------------------
+
+    if not owns_upload(upload_id):
+
+        return render_template(
+            "error.html",
+            error="This analysis session is not available."
+        ), 403
 
     # -----------------------------------------------------
     # Get uploaded filename
@@ -458,11 +870,22 @@ def download():
         filename = "Uploaded_FITS_File.fits"
 
     # -----------------------------------------------------
+    # Analysis-specific output directory
+    # -----------------------------------------------------
+
+    output_dir = os.path.abspath(
+        os.path.join(
+            OUTPUT_FOLDER,
+            upload_id
+        )
+    )
+
+    # -----------------------------------------------------
     # Read analysis results
     # -----------------------------------------------------
 
     results_path = os.path.join(
-        OUTPUT_FOLDER,
+        output_dir,
         "results.txt"
     )
 
@@ -472,6 +895,8 @@ def download():
             "error.html",
             error="Analysis results are not available."
         )
+
+    touch_analysis_activity(upload_id)
 
     with open(
         results_path,
@@ -506,21 +931,21 @@ def download():
 
         raw_img = encode_image(
             os.path.join(
-                OUTPUT_FOLDER,
+                output_dir,
                 "raw.png"
             )
         )
 
         processed_img = encode_image(
             os.path.join(
-                OUTPUT_FOLDER,
+                output_dir,
                 "processed.png"
             )
         )
 
         histogram_img = encode_image(
             os.path.join(
-                OUTPUT_FOLDER,
+                output_dir,
                 "histogram.png"
             )
         )
@@ -1164,7 +1589,7 @@ img {{
     # -----------------------------------------------------
 
     report_path = os.path.join(
-        OUTPUT_FOLDER,
+        output_dir,
         report_filename
     )
 
@@ -1181,11 +1606,10 @@ img {{
     # -----------------------------------------------------
 
     return send_from_directory(
-        OUTPUT_FOLDER,
+        output_dir,
         report_filename,
         as_attachment=True
     )
-
 
 # =========================================================
 # START FLASK SERVER

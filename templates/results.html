@@ -629,7 +629,7 @@
                         class="image-container active">
 
                         <img
-                            src="{{ url_for('output_file', filename='raw.png') }}"
+                            src="{{ url_for('output_file', upload_id=upload_id, filename='raw.png') }}"
                             alt="Raw FITS image">
 
                     </div>
@@ -642,7 +642,7 @@
                         class="image-container">
 
                         <img
-                            src="{{ url_for('output_file', filename='processed.png') }}"
+                            src="{{ url_for('output_file', upload_id=upload_id, filename='processed.png') }}"
                             alt="Processed FITS image">
 
                     </div>
@@ -655,7 +655,7 @@
                         class="image-container">
 
                         <img
-                            src="{{ url_for('output_file', filename='histogram.png') }}"
+                            src="{{ url_for('output_file', upload_id=upload_id, filename='histogram.png') }}"
                             alt="Intensity histogram">
 
                     </div>
@@ -877,7 +877,7 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', filename='raw.png') }}"
+                        href="{{ url_for('output_file', upload_id=upload_id, filename='raw.png') }}"
                         class="output-link"
                         target="_blank">
                         VIEW
@@ -905,7 +905,7 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', filename='processed.png') }}"
+                        href="{{ url_for('output_file', upload_id=upload_id, filename='processed.png') }}"
                         class="output-link"
                         target="_blank">
                         VIEW
@@ -933,7 +933,7 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', filename='histogram.png') }}"
+                        href="{{ url_for('output_file', upload_id=upload_id, filename='histogram.png') }}"
                         class="output-link"
                         target="_blank">
                         VIEW
@@ -961,7 +961,7 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', filename='results.txt') }}"
+                        href="{{ url_for('output_file', upload_id=upload_id, filename='results.txt') }}"
                         class="output-link"
                         target="_blank">
                         VIEW
@@ -982,7 +982,7 @@
         <section class="results-actions">
 
             <a
-                href="{{ url_for('download', file=filename) }}"
+                href="{{ url_for('download', upload_id=upload_id, file=filename) }}"
                 class="primary-action">
 
                 <span>
