@@ -165,7 +165,8 @@ uploadForm.addEventListener(
                                     String(file.size)
                             },
 
-                            body: chunk
+                            body: chunk,
+                            credentials: "include"
                         }
                     );
 
@@ -223,17 +224,15 @@ uploadForm.addEventListener(
                 'Analyzing… <span>⟳</span>';
 
 
-            const response =
-                await fetch(
-                    `${API_BASE_URL}/api/analyze-upload?upload_id=${encodeURIComponent(uploadId)}&filename=${encodeURIComponent(file.name)}`,
-                    {
-                        method: "GET"
-                    }
-                );
+            const response = await fetch(
+                `${API_BASE_URL}/api/analyze-upload?upload_id=${encodeURIComponent(uploadId)}&filename=${encodeURIComponent(file.name)}`,
+                {
+                    method: "GET",
+                    credentials: "include"
+                }
+            );
 
-
-            const data =
-                await response.json();
+            const data = await response.json();
 
 
             if (!response.ok || !data.success) {

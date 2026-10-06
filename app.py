@@ -32,7 +32,8 @@ CORS(
         r"/upload-chunk": {
             "origins": FRONTEND_ORIGIN
         }
-    }
+    },
+    supports_credentials=True
 )
 # ============================================================
 # APPLICATION CONFIGURATION
@@ -61,7 +62,10 @@ app.config.update(
     MAX_UPLOAD_CHUNK_SIZE=MAX_UPLOAD_CHUNK_SIZE,
     STALE_PART_MAX_AGE=STALE_PART_MAX_AGE,
 )
-
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True,
+)
 # Create required directories if they do not exist.
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
