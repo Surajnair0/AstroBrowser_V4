@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -8,11 +10,14 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
+
 </head>
+
 
 <body>
 
 <div class="app-shell">
+
 
     <!-- =========================================================
          TOP BAR
@@ -40,6 +45,7 @@
 
         </div>
 
+
         <div class="topbar-status">
 
             <span class="status-dot"></span>
@@ -49,6 +55,7 @@
         </div>
 
     </header>
+
 
 
     <!-- =========================================================
@@ -89,16 +96,16 @@
             <div class="results-grid">
 
 
-                <!-- BRIGHT REGIONS -->
-
                 <div class="result-card">
 
                     <div class="result-label">
                         BRIGHT REGIONS
                     </div>
 
-                    <div class="result-value">
-                        {{ result.num_regions }}
+                    <div
+                        class="result-value"
+                        id="num-regions">
+                        —
                     </div>
 
                     <div class="result-description">
@@ -108,7 +115,6 @@
                 </div>
 
 
-                <!-- UV INTENSITY -->
 
                 <div class="result-card">
 
@@ -116,8 +122,10 @@
                         UV INTENSITY
                     </div>
 
-                    <div class="result-value">
-                        {{ "%.6f"|format(result.uv_intensity) }}
+                    <div
+                        class="result-value"
+                        id="uv-intensity">
+                        —
                     </div>
 
                     <div class="result-description">
@@ -127,7 +135,6 @@
                 </div>
 
 
-                <!-- INTENSITY VARIATION -->
 
                 <div class="result-card">
 
@@ -135,8 +142,10 @@
                         INTENSITY VARIATION
                     </div>
 
-                    <div class="result-value">
-                        {{ "%.5f"|format(result.intensity_variation) }}
+                    <div
+                        class="result-value"
+                        id="intensity-variation">
+                        —
                     </div>
 
                     <div class="result-description">
@@ -146,7 +155,6 @@
                 </div>
 
 
-                <!-- CLASSIFICATION -->
 
                 <div class="result-card result-card-highlight">
 
@@ -154,8 +162,10 @@
                         CLASSIFICATION
                     </div>
 
-                    <div class="result-value result-category">
-                        {{ result.category }}
+                    <div
+                        class="result-value result-category"
+                        id="classification">
+                        —
                     </div>
 
                     <div class="result-description">
@@ -210,8 +220,10 @@
                     </div>
 
                     <p>
-                        <strong>UV emission is being used as a tracer
-                        of recent star formation.</strong>
+                        <strong>
+                            UV emission is being used as a tracer
+                            of recent star formation.
+                        </strong>
                     </p>
 
                     <p>
@@ -265,16 +277,16 @@
             <div class="metadata-grid">
 
 
-                <!-- DIMENSIONS -->
-
                 <div class="metadata-card">
 
                     <div class="metadata-label">
                         DIMENSIONS
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.dimensions }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-dimensions">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -284,7 +296,6 @@
                 </div>
 
 
-                <!-- TYPE -->
 
                 <div class="metadata-card">
 
@@ -292,8 +303,10 @@
                         TYPE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.dimension_type }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-dimension-type">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -303,7 +316,6 @@
                 </div>
 
 
-                <!-- ANALYSIS PLANE -->
 
                 <div class="metadata-card">
 
@@ -311,8 +323,10 @@
                         ANALYSIS PLANE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.analysis_plane }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-analysis-plane">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -322,7 +336,6 @@
                 </div>
 
 
-                <!-- DATA TYPE -->
 
                 <div class="metadata-card">
 
@@ -330,8 +343,10 @@
                         DATA TYPE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.data_type }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-data-type">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -341,7 +356,6 @@
                 </div>
 
 
-                <!-- INSTRUMENT -->
 
                 <div class="metadata-card">
 
@@ -349,8 +363,10 @@
                         INSTRUMENT
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.instrument }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-instrument">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -360,7 +376,6 @@
                 </div>
 
 
-                <!-- FILTER -->
 
                 <div class="metadata-card">
 
@@ -368,8 +383,10 @@
                         FILTER
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.filter }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-filter">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -379,7 +396,6 @@
                 </div>
 
 
-                <!-- EXPOSURE -->
 
                 <div class="metadata-card">
 
@@ -387,8 +403,10 @@
                         EXPOSURE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.exposure_time }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-exposure">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -398,7 +416,6 @@
                 </div>
 
 
-                <!-- OBSERVATION DATE -->
 
                 <div class="metadata-card">
 
@@ -406,8 +423,10 @@
                         OBSERVATION DATE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.observation_date }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-observation-date">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -417,7 +436,6 @@
                 </div>
 
 
-                <!-- TELESCOPE -->
 
                 <div class="metadata-card">
 
@@ -425,8 +443,10 @@
                         TELESCOPE
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.telescope }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-telescope">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -436,7 +456,6 @@
                 </div>
 
 
-                <!-- OBJECT -->
 
                 <div class="metadata-card">
 
@@ -444,8 +463,10 @@
                         OBJECT
                     </div>
 
-                    <div class="metadata-value">
-                        {{ result.metadata.object }}
+                    <div
+                        class="metadata-value"
+                        id="metadata-object">
+                        —
                     </div>
 
                     <div class="metadata-description">
@@ -497,11 +518,14 @@
                         BACKGROUND
                     </div>
 
-                    <div class="stat-value">
-                        {{ result.background }}
+                    <div
+                        class="stat-value"
+                        id="stat-background">
+                        —
                     </div>
 
                 </div>
+
 
 
                 <div class="stat-card">
@@ -510,11 +534,14 @@
                         THRESHOLD
                     </div>
 
-                    <div class="stat-value">
-                        {{ result.threshold }}
+                    <div
+                        class="stat-value"
+                        id="stat-threshold">
+                        —
                     </div>
 
                 </div>
+
 
 
                 <div class="stat-card">
@@ -523,11 +550,14 @@
                         BRIGHT REGIONS
                     </div>
 
-                    <div class="stat-value">
-                        {{ result.num_regions }}
+                    <div
+                        class="stat-value"
+                        id="stat-num-regions">
+                        —
                     </div>
 
                 </div>
+
 
 
                 <div class="stat-card">
@@ -536,11 +566,14 @@
                         UV INTENSITY
                     </div>
 
-                    <div class="stat-value">
-                        {{ "%.6f"|format(result.uv_intensity) }}
+                    <div
+                        class="stat-value"
+                        id="stat-uv-intensity">
+                        —
                     </div>
 
                 </div>
+
 
 
                 <div class="stat-card">
@@ -549,8 +582,10 @@
                         INTENSITY VARIATION
                     </div>
 
-                    <div class="stat-value">
-                        {{ "%.5f"|format(result.intensity_variation) }}
+                    <div
+                        class="stat-value"
+                        id="stat-intensity-variation">
+                        —
                     </div>
 
                 </div>
@@ -592,70 +627,66 @@
             <div class="visual-analysis-panel">
 
 
-                <!-- IMAGE TABS -->
-
                 <div class="image-tabs">
 
                     <button
                         class="image-tab active"
-                        onclick="showImage('raw', this)">
+                        data-image-type="raw">
                         RAW
                     </button>
 
                     <button
                         class="image-tab"
-                        onclick="showImage('processed', this)">
+                        data-image-type="processed">
                         PROCESSED
                     </button>
 
                     <button
                         class="image-tab"
-                        onclick="showImage('histogram', this)">
+                        data-image-type="histogram">
                         HISTOGRAM
                     </button>
 
                 </div>
 
 
-                <!-- IMAGE DISPLAY -->
 
                 <div class="image-viewer">
 
-
-                    <!-- RAW IMAGE -->
 
                     <div
                         id="image-raw"
                         class="image-container active">
 
                         <img
-                            src="{{ url_for('output_file', upload_id=upload_id, filename='raw.png') }}"
+                            id="raw-image"
+                            src=""
                             alt="Raw FITS image">
 
                     </div>
 
 
-                    <!-- PROCESSED IMAGE -->
 
                     <div
                         id="image-processed"
                         class="image-container">
 
                         <img
-                            src="{{ url_for('output_file', upload_id=upload_id, filename='processed.png') }}"
+                            id="processed-image"
+                            src=""
                             alt="Processed FITS image">
 
                     </div>
 
 
-                    <!-- HISTOGRAM -->
 
                     <div
                         id="image-histogram"
                         class="image-container">
 
                         <img
-                            src="{{ url_for('output_file', upload_id=upload_id, filename='histogram.png') }}"
+                            id="histogram-image"
+                            src=""
                             alt="Intensity histogram">
 
                     </div>
@@ -699,8 +730,6 @@
             <div class="pipeline">
 
 
-                <!-- STAGE 01 -->
-
                 <div class="pipeline-stage">
 
                     <div class="pipeline-number">
@@ -718,14 +747,10 @@
                 </div>
 
 
-                <!-- ARROW -->
-
                 <div class="pipeline-arrow">
                     →
                 </div>
 
-
-                <!-- STAGE 02 -->
 
                 <div class="pipeline-stage">
 
@@ -744,14 +769,10 @@
                 </div>
 
 
-                <!-- ARROW -->
-
                 <div class="pipeline-arrow">
                     →
                 </div>
 
-
-                <!-- STAGE 03 -->
 
                 <div class="pipeline-stage">
 
@@ -770,14 +791,10 @@
                 </div>
 
 
-                <!-- ARROW -->
-
                 <div class="pipeline-arrow">
                     →
                 </div>
 
-
-                <!-- STAGE 04 -->
 
                 <div class="pipeline-stage">
 
@@ -796,14 +813,10 @@
                 </div>
 
 
-                <!-- ARROW -->
-
                 <div class="pipeline-arrow">
                     →
                 </div>
 
-
-                <!-- STAGE 05 -->
 
                 <div class="pipeline-stage">
 
@@ -877,13 +890,15 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', upload_id=upload_id, filename='raw.png') }}"
+                        id="output-raw"
+                        href="#"
                         class="output-link"
                         target="_blank">
                         VIEW
                     </a>
 
                 </div>
+
 
 
                 <div class="output-item">
@@ -905,13 +920,15 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', upload_id=upload_id, filename='processed.png') }}"
+                        id="output-processed"
+                        href="#"
                         class="output-link"
                         target="_blank">
                         VIEW
                     </a>
 
                 </div>
+
 
 
                 <div class="output-item">
@@ -933,13 +950,15 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', upload_id=upload_id, filename='histogram.png') }}"
+                        id="output-histogram"
+                        href="#"
                         class="output-link"
                         target="_blank">
                         VIEW
                     </a>
 
                 </div>
+
 
 
                 <div class="output-item">
@@ -961,7 +980,8 @@
                     </div>
 
                     <a
-                        href="{{ url_for('output_file', upload_id=upload_id, filename='results.txt') }}"
+                        id="output-results"
+                        href="#"
                         class="output-link"
                         target="_blank">
                         VIEW
@@ -982,7 +1002,8 @@
         <section class="results-actions">
 
             <a
-                href="{{ url_for('download', upload_id=upload_id, file=filename) }}"
+                id="download-report"
+                href="#"
                 class="primary-action">
 
                 <span>
@@ -994,8 +1015,9 @@
             </a>
 
 
+
             <a
-                href="{{ url_for('home') }}"
+                href="/"
                 class="secondary-action">
 
                 Analyze Another FITS File
@@ -1030,69 +1052,12 @@
 
 
 <!-- =============================================================
-     IMAGE TAB JAVASCRIPT
+     RESULTS JAVASCRIPT
      ============================================================= -->
 
-<script>
-
-function showImage(type, button) {
-
-    /*
-     * Hide all image containers
-     */
-
-    const containers =
-        document.querySelectorAll('.image-container');
-
-    containers.forEach(function(container) {
-
-        container.classList.remove('active');
-
-    });
-
-
-    /*
-     * Remove active state from all tabs
-     */
-
-    const tabs =
-        document.querySelectorAll('.image-tab');
-
-    tabs.forEach(function(tab) {
-
-        tab.classList.remove('active');
-
-    });
-
-
-    /*
-     * Show selected image
-     */
-
-    const selectedImage =
-        document.getElementById('image-' + type);
-
-    if (selectedImage) {
-
-        selectedImage.classList.add('active');
-
-    }
-
-
-    /*
-     * Highlight selected tab
-     */
-
-    if (button) {
-
-        button.classList.add('active');
-
-    }
-
-}
-
-</script>
+<script src="{{ url_for('static', filename='results.js') }}"></script>
 
 
 </body>
+
 </html>

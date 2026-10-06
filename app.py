@@ -1,4 +1,12 @@
-from flask import Flask, render_template, request, send_from_directory, session
+from flask import (
+    Flask,
+    render_template,
+    request,
+    send_from_directory,
+    session,
+    jsonify,
+)
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import base64
@@ -10,14 +18,48 @@ from analyze_fits import analyze_fits
 
 
 app = Flask(__name__)
+FRONTEND_ORIGIN = os.environ.get(
+    "FRONTEND_ORIGIN",
+    "http://127.0.0.1:8000"
+)
+
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": FRONTEND_ORIGIN
+        }
+    }
+)
+# ============================================================
+# APPLICATION CONFIGURATION
+# ============================================================
+
 app.secret_key = os.environ.get(
     "ASTROBROWSER_SECRET_KEY"
 ) or secrets.token_hex(32)
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+# Always resolve paths relative to this app.py file.
+# This prevents problems when the application is started
+# from a different working directory.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
+
+UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
+MAX_UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024
+STALE_PART_MAX_AGE = 60 * 60
+
+app.config.update(
+    UPLOAD_FOLDER=UPLOAD_FOLDER,
+    OUTPUT_FOLDER=OUTPUT_FOLDER,
+    UPLOAD_CHUNK_SIZE=UPLOAD_CHUNK_SIZE,
+    MAX_UPLOAD_CHUNK_SIZE=MAX_UPLOAD_CHUNK_SIZE,
+    STALE_PART_MAX_AGE=STALE_PART_MAX_AGE,
+)
+
+# Create required directories if they do not exist.
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -34,13 +76,15 @@ def home():
     return render_template(
         "index.html"
     )
-
+@app.route("/results.html", methods=["GET"])
+def results_page():
+    return render_template("results.html")
 # =========================================================
 # FITS UPLOAD + ANALYSIS
 # =========================================================
 
 # =========================================================
-# CHUNKED FITS UPLOAD
+# UPLOAD CONFIGURATION + SESSION OWNERSHIP
 # =========================================================
 
 UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024
@@ -147,7 +191,6 @@ def delete_owned_analysis_data():
 # TEMPORARY DATA CLEANUP
 # =========================================================
 
-STALE_PART_MAX_AGE = 60 * 60  # 1 hour
 
 
 def touch_analysis_activity(upload_id):
@@ -370,6 +413,10 @@ def validate_upload_metadata(upload_id, filename, chunk_index, total_chunks):
         return "Invalid upload chunk information."
 
     return None
+
+# =========================================================
+# CHUNKED UPLOAD ROUTE
+# =========================================================
 
 @app.route("/upload-chunk", methods=["POST"])
 def upload_chunk():
@@ -596,20 +643,31 @@ def upload_chunk():
             "error": "Unable to finalize the uploaded FITS file."
         }, 500
 
-@app.route("/analyze-upload", methods=["GET"])
-def analyze_upload():
+# =========================================================
+# ANALYSIS ROUTE
+# =========================================================
 
-    upload_id = request.args.get(
-        "upload_id",
-        ""
-    )
 
-    filename = secure_filename(
-        request.args.get(
-            "filename",
-            ""
-        )
-    )
+# =========================================================
+# CORE ANALYSIS HANDLER
+# =========================================================
+
+def run_upload_analysis(upload_id, filename):
+    """
+    Validate an uploaded FITS file, run the scientific
+    analysis, and return the analysis data.
+
+    This function contains the backend analysis workflow
+    without deciding how the result should be displayed.
+
+    It can therefore be used by:
+        - the current HTML route
+        - the future Vercel frontend API
+    """
+
+    # ---------------------------------------------------------
+    # VALIDATE UPLOAD METADATA
+    # ---------------------------------------------------------
 
     error = validate_upload_metadata(
         upload_id,
@@ -619,20 +677,22 @@ def analyze_upload():
     )
 
     if error:
-        return render_template(
-            "error.html",
-            error=error
-        )
+        return {
+            "success": False,
+            "error": error,
+            "status_code": 400
+        }
 
     # ---------------------------------------------------------
     # SESSION OWNERSHIP CHECK
     # ---------------------------------------------------------
 
     if not owns_upload(upload_id):
-        return render_template(
-            "error.html",
-            error="This analysis session is not available."
-        ), 403
+        return {
+            "success": False,
+            "error": "This analysis session is not available.",
+            "status_code": 403
+        }
 
     # ---------------------------------------------------------
     # PRIVATE ANALYSIS WORKSPACE
@@ -659,16 +719,18 @@ def analyze_upload():
     if not filepath.startswith(
         analysis_dir + os.sep
     ):
-        return render_template(
-            "error.html",
-            error="Invalid upload path."
-        )
+        return {
+            "success": False,
+            "error": "Invalid upload path.",
+            "status_code": 400
+        }
 
     if not os.path.isfile(filepath):
-        return render_template(
-            "error.html",
-            error="Uploaded FITS file is no longer available."
-        )
+        return {
+            "success": False,
+            "error": "Uploaded FITS file is no longer available.",
+            "status_code": 404
+        }
 
     # ---------------------------------------------------------
     # PRIVATE OUTPUT DIRECTORY
@@ -676,7 +738,7 @@ def analyze_upload():
 
     output_dir = os.path.abspath(
         os.path.join(
-            OUTPUT_FOLDER,
+            app.config["OUTPUT_FOLDER"],
             upload_id
         )
     )
@@ -687,6 +749,10 @@ def analyze_upload():
         output_dir,
         exist_ok=True
     )
+
+    # ---------------------------------------------------------
+    # RUN SCIENTIFIC FITS ANALYSIS
+    # ---------------------------------------------------------
 
     try:
 
@@ -703,6 +769,10 @@ def analyze_upload():
             "Analysis finished!"
         )
 
+        # -----------------------------------------------------
+        # READ HUMAN-READABLE RESULTS
+        # -----------------------------------------------------
+
         results_path = os.path.join(
             output_dir,
             "results.txt"
@@ -716,30 +786,119 @@ def analyze_upload():
 
             results = f.read()
 
-        return render_template(
-            "results.html",
-            results=results,
-            filename=filename,
-            result=result,
-            upload_id=upload_id
-        )
+        return {
+            "success": True,
+            "filename": filename,
+            "upload_id": upload_id,
+            "result": result,
+            "results": results,
+            "output_dir": output_dir,
+            "status_code": 200
+        }
 
     except Exception as e:
-
         print(
             "Analysis error:"
         )
-
         print(e)
 
-        return render_template(
-            "error.html",
-            error=str(e)
-        ), 500
+        error_message = str(e)
+
+        if (
+            "valid FITS" in error_message
+            or "could not be read" in error_message
+            or "FITS image" in error_message
+        ):
+            return {
+                "success": False,
+                "error": error_message,
+                "status_code": 400
+            }
+
+        return {
+            "success": False,
+            "error": error_message,
+            "status_code": 500
+        }
 
 
 # =========================================================
+# CURRENT HTML ANALYSIS ROUTE
+# =========================================================
+
+@app.route("/analyze-upload", methods=["GET"])
+def analyze_upload():
+
+    upload_id = request.args.get(
+        "upload_id",
+        ""
+    )
+
+    filename = secure_filename(
+        request.args.get(
+            "filename",
+            ""
+        )
+    )
+
+    analysis = run_upload_analysis(
+        upload_id,
+        filename
+    )
+
+    if not analysis["success"]:
+
+        return render_template(
+            "error.html",
+            error=analysis["error"]
+        ), analysis["status_code"]
+
+    return render_template(
+        "results.html",
+        results=analysis["results"],
+        filename=analysis["filename"],
+        result=analysis["result"],
+        upload_id=analysis["upload_id"]
+    )
+
+
+# =========================================================
+# API ANALYSIS ROUTE
+# =========================================================
+
+@app.route("/api/analyze-upload", methods=["GET"])
+def api_analyze_upload():
+    upload_id = request.args.get("upload_id", "")
+    filename = secure_filename(request.args.get("filename", ""))
+
+    analysis = run_upload_analysis(upload_id, filename)
+
+    if not analysis["success"]:
+        return jsonify({
+            "success": False,
+            "error": analysis["error"]
+        }), analysis["status_code"]
+
+    return jsonify({
+        "success": True,
+        "filename": analysis["filename"],
+        "upload_id": analysis["upload_id"],
+        "result": analysis["result"],
+        "results": analysis["results"],
+        "outputs": {
+            "raw": f"/outputs/{analysis['upload_id']}/raw.png",
+            "processed": f"/outputs/{analysis['upload_id']}/processed.png",
+            "histogram": f"/outputs/{analysis['upload_id']}/histogram.png",
+            "results": f"/outputs/{analysis['upload_id']}/results.txt"
+        }
+    })
+
+# =========================================================
 # OUTPUT FILES
+# =========================================================
+
+# =========================================================
+# OUTPUT FILE ROUTE
 # =========================================================
 
 @app.route("/outputs/<upload_id>/<filename>")
@@ -814,171 +973,15 @@ def output_file(upload_id, filename):
 # DOWNLOAD HTML REPORT
 # =========================================================
 
-@app.route("/download")
-def download():
 
-    # -----------------------------------------------------
-    # Get analysis identifier
-    # -----------------------------------------------------
+# =========================================================
+# HTML REPORT GENERATION
+# =========================================================
 
-    upload_id = request.args.get(
-        "upload_id",
-        ""
-    )
+def build_html_report(filename, results, raw_img, processed_img, histogram_img):
+    """Build the standalone HTML analysis report."""
 
-    # -----------------------------------------------------
-    # Validate analysis identifier
-    # -----------------------------------------------------
-
-    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
-
-        return render_template(
-            "error.html",
-            error="Invalid analysis identifier."
-        ), 400
-
-    # -----------------------------------------------------
-    # SESSION OWNERSHIP CHECK
-    # -----------------------------------------------------
-
-    if not owns_upload(upload_id):
-
-        return render_template(
-            "error.html",
-            error="This analysis session is not available."
-        ), 403
-
-    # -----------------------------------------------------
-    # Get uploaded filename
-    # -----------------------------------------------------
-
-    filename = request.args.get(
-        "file",
-        "Uploaded FITS File"
-    )
-
-    # -----------------------------------------------------
-    # Secure filename
-    # -----------------------------------------------------
-
-    filename = secure_filename(
-        filename
-    )
-
-    if filename == "":
-
-        filename = "Uploaded_FITS_File.fits"
-
-    # -----------------------------------------------------
-    # Analysis-specific output directory
-    # -----------------------------------------------------
-
-    output_dir = os.path.abspath(
-        os.path.join(
-            OUTPUT_FOLDER,
-            upload_id
-        )
-    )
-
-    # -----------------------------------------------------
-    # Read analysis results
-    # -----------------------------------------------------
-
-    results_path = os.path.join(
-        output_dir,
-        "results.txt"
-    )
-
-    if not os.path.exists(results_path):
-
-        return render_template(
-            "error.html",
-            error="Analysis results are not available."
-        )
-
-    touch_analysis_activity(upload_id)
-
-    with open(
-        results_path,
-        "r",
-        encoding="utf-8"
-    ) as f:
-
-        results = f.read()
-
-    # -----------------------------------------------------
-    # Convert images to Base64
-    # -----------------------------------------------------
-
-    def encode_image(path):
-
-        if not os.path.exists(path):
-
-            raise FileNotFoundError(
-                f"Required image not found: {path}"
-            )
-
-        with open(
-            path,
-            "rb"
-        ) as img:
-
-            return base64.b64encode(
-                img.read()
-            ).decode("utf-8")
-
-    try:
-
-        raw_img = encode_image(
-            os.path.join(
-                output_dir,
-                "raw.png"
-            )
-        )
-
-        processed_img = encode_image(
-            os.path.join(
-                output_dir,
-                "processed.png"
-            )
-        )
-
-        histogram_img = encode_image(
-            os.path.join(
-                output_dir,
-                "histogram.png"
-            )
-        )
-
-    except Exception as e:
-
-        return render_template(
-            "error.html",
-            error=str(e)
-        )
-
-    # -----------------------------------------------------
-    # Create report filename
-    # -----------------------------------------------------
-
-    base_name = os.path.splitext(
-        filename
-    )[0]
-
-    base_name = base_name.replace(
-        " ",
-        "_"
-    )
-
-    report_filename = (
-        f"Analysis_Report_{base_name}.html"
-    )
-
-    # -----------------------------------------------------
-    # Create standalone HTML report
-    # -----------------------------------------------------
-
-    html = f"""
+    return f"""
 <!DOCTYPE html>
 
 <html lang="en">
@@ -1583,6 +1586,185 @@ img {{
 
 </html>
 """
+
+
+# =========================================================
+# REPORT DOWNLOAD ROUTE
+# =========================================================
+
+@app.route("/download")
+def download():
+
+    # -----------------------------------------------------
+    # Get analysis identifier
+    # -----------------------------------------------------
+
+    upload_id = request.args.get(
+        "upload_id",
+        ""
+    )
+
+    # -----------------------------------------------------
+    # Validate analysis identifier
+    # -----------------------------------------------------
+
+    if not UPLOAD_ID_PATTERN.fullmatch(upload_id):
+
+        return render_template(
+            "error.html",
+            error="Invalid analysis identifier."
+        ), 400
+
+    # -----------------------------------------------------
+    # SESSION OWNERSHIP CHECK
+    # -----------------------------------------------------
+
+    if not owns_upload(upload_id):
+
+        return render_template(
+            "error.html",
+            error="This analysis session is not available."
+        ), 403
+
+    # -----------------------------------------------------
+    # Get uploaded filename
+    # -----------------------------------------------------
+
+    filename = request.args.get(
+        "file",
+        "Uploaded FITS File"
+    )
+
+    # -----------------------------------------------------
+    # Secure filename
+    # -----------------------------------------------------
+
+    filename = secure_filename(
+        filename
+    )
+
+    if filename == "":
+
+        filename = "Uploaded_FITS_File.fits"
+
+    # -----------------------------------------------------
+    # Analysis-specific output directory
+    # -----------------------------------------------------
+
+    output_dir = os.path.abspath(
+        os.path.join(
+            OUTPUT_FOLDER,
+            upload_id
+        )
+    )
+
+    # -----------------------------------------------------
+    # Read analysis results
+    # -----------------------------------------------------
+
+    results_path = os.path.join(
+        output_dir,
+        "results.txt"
+    )
+
+    if not os.path.exists(results_path):
+
+        return render_template(
+            "error.html",
+            error="Analysis results are not available."
+        )
+
+    touch_analysis_activity(upload_id)
+
+    with open(
+        results_path,
+        "r",
+        encoding="utf-8"
+    ) as f:
+
+        results = f.read()
+
+    # -----------------------------------------------------
+    # Convert images to Base64
+    # -----------------------------------------------------
+
+    def encode_image(path):
+
+        if not os.path.exists(path):
+
+            raise FileNotFoundError(
+                f"Required image not found: {path}"
+            )
+
+        with open(
+            path,
+            "rb"
+        ) as img:
+
+            return base64.b64encode(
+                img.read()
+            ).decode("utf-8")
+
+    try:
+
+        raw_img = encode_image(
+            os.path.join(
+                output_dir,
+                "raw.png"
+            )
+        )
+
+        processed_img = encode_image(
+            os.path.join(
+                output_dir,
+                "processed.png"
+            )
+        )
+
+        histogram_img = encode_image(
+            os.path.join(
+                output_dir,
+                "histogram.png"
+            )
+        )
+
+    except Exception as e:
+
+        return render_template(
+            "error.html",
+            error=str(e)
+        )
+
+    # -----------------------------------------------------
+    # Create report filename
+    # -----------------------------------------------------
+
+    base_name = os.path.splitext(
+        filename
+    )[0]
+
+    base_name = base_name.replace(
+        " ",
+        "_"
+    )
+
+    report_filename = (
+        f"Analysis_Report_{base_name}.html"
+    )
+
+    # -----------------------------------------------------
+    # Create standalone HTML report
+    # -----------------------------------------------------
+
+    html = build_html_report(
+        filename,
+        results,
+        raw_img,
+        processed_img,
+        histogram_img
+    )
+
+
 
     # -----------------------------------------------------
     # Save report

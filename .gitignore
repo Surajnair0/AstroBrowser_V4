@@ -5,3 +5,4 @@ uploads/*
 outputs/*
 .DS_Store
 fake.fits
+app_backup_step2.py
