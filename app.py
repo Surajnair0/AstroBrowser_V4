@@ -28,6 +28,9 @@ CORS(
     resources={
         r"/api/*": {
             "origins": FRONTEND_ORIGIN
+        },
+        r"/upload-chunk": {
+            "origins": FRONTEND_ORIGIN
         }
     }
 )

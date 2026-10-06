@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Astro Laboratory | Astronomical Image Analysis</title>
+
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div class="brand">
+            <span class="brand-symbol">✦</span>
+            <span>ASTRO LABORATORY</span>
+        </div>
+
+        <div class="nav-links">
+            <span>ASTROSAT</span>
+            <span>FITS ANALYSIS</span>
+        </div>
+
+    </header>
+
+
+    <main class="home-page">
+
+        <section class="hero">
+
+            <div class="eyebrow">
+                ASTRONOMICAL IMAGE ANALYSIS
+            </div>
+
+            <h1>
+                Explore.
+                <span>Process.</span>
+                Interpret.
+            </h1>
+
+            <p class="hero-description">
+                Analyze AstroSat FITS images using a Python-based
+                astronomical image-processing pipeline.
+            </p>
+
+
+            <form
+                id="upload-form"
+                class="upload-form"
+            >
+
+                <div class="upload-box">
+
+                    <div class="upload-icon">
+                        ✦
+                    </div>
+
+                    <h2>
+                        Upload a FITS Image
+                    </h2>
+
+                    <p>
+                        Select an AstroSat FITS image to begin analysis.
+                    </p>
+
+
+                    <label for="fitsfile" class="file-label">
+                        Choose FITS File
+                    </label>
+
+                    <input
+                        type="file"
+                        id="fitsfile"
+                        name="fitsfile"
+                        accept=".fits"
+                        required
+                    >
+
+                    <div id="file-name" class="file-name">
+                        No file selected
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="analyze-button"
+                        class="primary-button"
+                    >
+                        Analyze FITS File
+                        <span>→</span>
+                    </button>
+
+                    <div
+                        id="upload-status"
+                        class="upload-status"
+                        aria-live="polite"
+                    ></div>
+
+                    <div
+                        id="upload-progress"
+                        class="upload-progress"
+                        aria-hidden="true"
+                    >
+                        <div
+                            id="upload-progress-bar"
+                            class="upload-progress-bar"
+                        ></div>
+                    </div>
+
+                    <div class="file-note">
+                        Supported format: .fits
+                    </div>
+
+                </div>
+
+            </form>
+
+        </section>
+
+
+        <section class="pipeline-preview">
+
+            <div class="section-label">
+                ANALYSIS PIPELINE
+            </div>
+
+            <div class="pipeline">
+
+                <div class="pipeline-step">
+                    <span class="step-number">01</span>
+                    <strong>FITS IMAGE</strong>
+                    <small>Input data</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">02</span>
+                    <strong>PROCESS</strong>
+                    <small>Noise reduction</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">03</span>
+                    <strong>DETECT</strong>
+                    <small>Bright regions</small>
+                </div>
+
+                <div class="pipeline-line"></div>
+
+                <div class="pipeline-step">
+                    <span class="step-number">04</span>
+                    <strong>CLASSIFY</strong>
+                    <small>UV analysis</small>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer class="site-footer">
+
+        <span>ASTRO LABORATORY</span>
+
+        <span class="footer-divider">•</span>
+
+        <span>Python-powered astronomical analysis</span>
+
+    </footer>
+
+
+    <!-- External JavaScript -->
+    <script src="/app.js"></script>
+
+</html>
